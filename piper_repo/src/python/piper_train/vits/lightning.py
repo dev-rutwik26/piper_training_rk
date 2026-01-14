@@ -77,6 +77,9 @@ class VitsModel(pl.LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
+        
+        # Lightning 2.x requires manual optimization for multiple optimizers
+        self.automatic_optimization = False
 
         if (self.hparams.num_speakers > 1) and (self.hparams.gin_channels <= 0):
             # Default gin_channels for multi-speaker model
@@ -186,12 +189,26 @@ class VitsModel(pl.LightningModule):
             batch_size=self.hparams.batch_size,
         )
 
-    def training_step(self, batch: Batch, batch_idx: int, optimizer_idx: int):
-        if optimizer_idx == 0:
-            return self.training_step_g(batch)
-
-        if optimizer_idx == 1:
-            return self.training_step_d(batch)
+    def training_step(self, batch: Batch, batch_idx: int):
+        # Manual optimization for Lightning 2.x with multiple optimizers
+        opt_g, opt_d = self.optimizers()
+        
+        # Train Generator
+        loss_gen_all = self.training_step_g(batch)
+        opt_g.zero_grad()
+        self.manual_backward(loss_gen_all)
+        opt_g.step()
+        
+        # Train Discriminator
+        loss_disc_all = self.training_step_d(batch)
+        opt_d.zero_grad()
+        self.manual_backward(loss_disc_all)
+        opt_d.step()
+        
+        # Step learning rate schedulers
+        sch_g, sch_d = self.lr_schedulers()
+        sch_g.step()
+        sch_d.step()
 
     def training_step_g(self, batch: Batch):
         x, x_lengths, y, _, spec, spec_lengths, speaker_ids = (
@@ -329,7 +346,10 @@ class VitsModel(pl.LightningModule):
             ),
         ]
 
-        return optimizers, schedulers
+        return [
+            {"optimizer": optimizers[0], "lr_scheduler": schedulers[0]},
+            {"optimizer": optimizers[1], "lr_scheduler": schedulers[1]},
+        ]
 
     @staticmethod
     def add_model_specific_args(parent_parser):

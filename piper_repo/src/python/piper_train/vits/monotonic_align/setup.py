@@ -1,13 +1,9 @@
-from distutils.core import setup
-from pathlib import Path
-
-import numpy
+from distutils.core import setup, Extension
 from Cython.Build import cythonize
-
-_DIR = Path(__file__).parent
+import numpy
 
 setup(
     name="monotonic_align",
-    ext_modules=cythonize(str(_DIR / "core.pyx")),
+    ext_modules=cythonize([Extension("core", ["core.pyx"])]),
     include_dirs=[numpy.get_include()],
 )
