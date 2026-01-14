@@ -34,7 +34,16 @@ def main():
         "--resume_from_single_speaker_checkpoint",
         help="For multi-speaker models only. Converts a single-speaker checkpoint to multi-speaker and resumes training",
     )
-    Trainer.add_argparse_args(parser)
+    
+    # Manually add PL 2.x arguments that we use
+    parser.add_argument("--max_epochs", type=int, default=1000)
+    parser.add_argument("--accelerator", default="auto")
+    parser.add_argument("--devices", default="auto")
+    parser.add_argument("--precision", default="32-true")
+    parser.add_argument("--default_root_dir", type=str, default=None)
+    parser.add_argument("--resume_from_checkpoint", type=str, default=None)
+
+    # Trainer.add_argparse_args(parser) # Removed in PL 2.0
     VitsModel.add_model_specific_args(parser)
     parser.add_argument("--seed", type=int, default=1234)
     args = parser.parse_args()
@@ -42,7 +51,10 @@ def main():
 
     args.dataset_dir = Path(args.dataset_dir)
     if not args.default_root_dir:
-        args.default_root_dir = args.dataset_dir
+        args.default_root_dir = str(args.dataset_dir) # Must be string for Trainer explicitly
+    
+    # Fix precision argument for PL 2.x (it expects string or int, usually strings like '16-mixed', '32-true')
+    # If the user passed '32', convert it or keep it. PL 2 handles '32' usually as '32-true'.
 
     torch.backends.cudnn.benchmark = True
     torch.manual_seed(args.seed)
@@ -57,12 +69,23 @@ def main():
         num_speakers = int(config["num_speakers"])
         sample_rate = int(config["audio"]["sample_rate"])
 
-    trainer = Trainer.from_argparse_args(args)
+
+    callbacks = []
     if args.checkpoint_epochs is not None:
-        trainer.callbacks = [ModelCheckpoint(every_n_epochs=args.checkpoint_epochs)]
+        callbacks = [ModelCheckpoint(every_n_epochs=args.checkpoint_epochs)]
         _LOGGER.debug(
             "Checkpoints will be saved every %s epoch(s)", args.checkpoint_epochs
         )
+
+    # Instantiate Trainer explicitly
+    trainer = Trainer(
+        max_epochs=args.max_epochs,
+        accelerator=args.accelerator,
+        devices=int(args.devices) if isinstance(args.devices, str) and args.devices.isdigit() else args.devices,
+        precision=args.precision,
+        default_root_dir=args.default_root_dir,
+        callbacks=callbacks
+    )
 
     dict_args = vars(args)
     if args.quality == "x-low":
@@ -121,7 +144,11 @@ def main():
             "Successfully converted single-speaker checkpoint to multi-speaker"
         )
 
-    trainer.fit(model)
+    ckpt_path = args.resume_from_checkpoint
+    if args.resume_from_single_speaker_checkpoint:
+        ckpt_path = None # We manually loaded weights, start fresh
+
+    trainer.fit(model, ckpt_path=ckpt_path)
 
 
 def load_state_dict(model, saved_state_dict):
