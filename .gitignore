@@ -11,3 +11,4 @@ scripts/training_dir/
 scripts/wavs/
 scripts/temp_build/
 
+*.zip
