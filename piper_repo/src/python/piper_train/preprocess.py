@@ -201,7 +201,7 @@ def main() -> None:
 
     assert args.max_workers is not None
 
-    batch_size = int(num_utterances / (args.max_workers * 2))
+    batch_size = max(1, int(num_utterances / (args.max_workers * 2)))
     queue_in: "Queue[Iterable[Utterance]]" = JoinableQueue()
     queue_out: "Queue[Optional[Utterance]]" = Queue()
 

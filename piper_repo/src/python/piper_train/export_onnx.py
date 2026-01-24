@@ -41,6 +41,7 @@ def main() -> None:
 
     model = VitsModel.load_from_checkpoint(args.checkpoint, dataset=None)
     model_g = model.model_g
+    model_g.cpu()
 
     num_symbols = model_g.n_vocab
     num_speakers = model_g.n_speakers

@@ -10,5 +10,7 @@ scripts/dataset/
 scripts/training_dir/
 scripts/wavs/
 scripts/temp_build/
-
+*.onnx
+*.json
 *.zip
+*.wav

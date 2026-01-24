@@ -357,6 +357,7 @@ class VitsModel(pl.LightningModule):
         parser.add_argument("--batch-size", type=int, required=True)
         parser.add_argument("--validation-split", type=float, default=0.1)
         parser.add_argument("--num-test-examples", type=int, default=5)
+        parser.add_argument("--num-workers", type=int, default=1)
         parser.add_argument(
             "--max-phoneme-ids",
             type=int,

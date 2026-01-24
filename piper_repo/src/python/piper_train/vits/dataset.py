@@ -99,7 +99,7 @@ class PiperDataset(Dataset):
                     continue
 
                 try:
-                    utt = PiperDataset.load_utterance(line)
+                    utt = PiperDataset.load_utterance(line, dataset_path.parent)
                     if (max_phoneme_ids is None) or (
                         len(utt.phoneme_ids) <= max_phoneme_ids
                     ):
@@ -118,12 +118,27 @@ class PiperDataset(Dataset):
             _LOGGER.warning("Skipped %s utterance(s)", num_skipped)
 
     @staticmethod
-    def load_utterance(line: str) -> Utterance:
+    def load_utterance(line: str, base_path: Optional[Path] = None) -> Utterance:
         utt_dict = json.loads(line)
+        audio_norm_path = Path(utt_dict["audio_norm_path"])
+        audio_spec_path = Path(utt_dict["audio_spec_path"])
+
+        if base_path is not None:
+             # Try to resolve relative to dataset file
+             if not audio_norm_path.exists():
+                 norm_candidate = base_path / audio_norm_path
+                 if norm_candidate.exists():
+                     audio_norm_path = norm_candidate
+            
+             if not audio_spec_path.exists():
+                 spec_candidate = base_path / audio_spec_path
+                 if spec_candidate.exists():
+                     audio_spec_path = spec_candidate
+
         return Utterance(
             phoneme_ids=utt_dict["phoneme_ids"],
-            audio_norm_path=Path(utt_dict["audio_norm_path"]),
-            audio_spec_path=Path(utt_dict["audio_spec_path"]),
+            audio_norm_path=audio_norm_path,
+            audio_spec_path=audio_spec_path,
             speaker_id=utt_dict.get("speaker_id"),
             text=utt_dict.get("text"),
         )
