@@ -14,3 +14,5 @@ scripts/temp_build/
 *.json
 *.zip
 *.wav
+*.pt
+*.yaml
