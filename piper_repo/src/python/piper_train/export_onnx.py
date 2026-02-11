@@ -3,6 +3,10 @@ import argparse
 import logging
 from pathlib import Path
 from typing import Optional
+import pathlib
+
+# Fix for checkpoints trained on Windows
+pathlib.WindowsPath = pathlib.PosixPath
 
 import torch
 
