@@ -101,6 +101,9 @@ def main() -> None:
         "--skip-audio", action="store_true", help="Don't preprocess audio"
     )
     parser.add_argument(
+        "--espeak-data", help="Path to eSpeak-ng data directory"
+    )
+    parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to the console"
     )
     args = parser.parse_args()
@@ -299,7 +302,9 @@ def phonemize_batch_espeak(
                         utt.text = tashkeel_run(utt.text)
 
                     _LOGGER.debug(utt)
-                    all_phonemes = phonemize_espeak(casing(utt.text), args.language)
+                    all_phonemes = phonemize_espeak(
+                        casing(utt.text), args.language, data_path=args.espeak_data
+                    )
 
                     # Flatten
                     utt.phonemes = [
